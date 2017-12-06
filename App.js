@@ -1,57 +1,49 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- * @flow
- */
-
 import React, { Component } from 'react';
-import {
-  Platform,
-  StyleSheet,
-  Text,
-  View
-} from 'react-native';
+import { Button, StyleSheet, Text, View } from 'react-native';
+import { HubConnection } from '@aspnet/signalr-client';
 
-const instructions = Platform.select({
-  ios: 'Press Cmd+R to reload,\n' +
-    'Cmd+D or shake for dev menu',
-  android: 'Double tap R on your keyboard to reload,\n' +
-    'Shake or press menu button for dev menu',
-});
+export default class App extends Component {
+    state = {
+        connected: false,
+        data: 'no data'
+    };
 
-export default class App extends Component<{}> {
-  render() {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.welcome}>
-          Welcome to React Native!
-        </Text>
-        <Text style={styles.instructions}>
-          To get started, edit App.js
-        </Text>
-        <Text style={styles.instructions}>
-          {instructions}
-        </Text>
-      </View>
-    );
-  }
+    onConnect = () => {
+        // let con = new HttpConnection();
+
+        this.connection = new HubConnection("http://10.0.2.2:5001/signaling");
+
+        this.connection.on('FromServerTest', (data) => this.setState({ connected: true, data: data }));
+
+        this.connection.start();
+    };
+
+    onTest = () => {
+        this.connection.invoke('Test');
+    };
+
+    render() {
+        return (
+            <View style={styles.container}>
+                <Text style={styles.welcome}>Test state: {this.state.connected ? 'tested' : 'not tested'}</Text>
+                <Text style={styles.welcome}>Data: {this.state.data}</Text>
+                <Button title='Connect' onPress={this.onConnect}/>
+                <Button title='Test' onPress={this.onTest}/>
+            </View>
+        );
+    }
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5FCFF',
-  },
-  welcome: {
-    fontSize: 20,
-    textAlign: 'center',
-    margin: 10,
-  },
-  instructions: {
-    textAlign: 'center',
-    color: '#333333',
-    marginBottom: 5,
-  },
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F5FCFF',
+    },
+    welcome: {
+        fontSize: 20,
+        textAlign: 'center',
+        margin: 10,
+    }
 });
