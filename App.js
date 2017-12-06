@@ -30,22 +30,22 @@ function getLocalStream(isFront, callback) {
     }, logError);
 }
 
-function createPC(isOffer, conn, myGroup, interlocGroup, addRemoteStreamCallback) {
+function createPC(isOffer, conn, myGroup, interlocGroup, stream, addRemoteStreamCallback) {
     const pc = new RTCPeerConnection(configuration);
 
     pc.onicecandidate = (e) => {
         console.log('onicecandidate', e.candidate);
 
         if (e.candidate) {
-            conn.invoke("SendCandidate", interlocGroup, e.candidate);
+            conn.invoke("SendCandidate", interlocGroup, JSON.stringify(e.candidate));
         }
     };
 
     function createOffer() {
         pc.createOffer().then(pc.setLocalDescription).then(() => {
-            console.log("DESCRIPTION", pc.localDescription);
+            console.log("OFFER", pc.localDescription);
 
-            conn.invoke("SendOffer", interlocGroup, myGroup, pc.localDescription);
+            conn.invoke("SendOffer", interlocGroup, myGroup, JSON.stringify(pc.localDescription));
         });
     }
 
@@ -55,8 +55,11 @@ function createPC(isOffer, conn, myGroup, interlocGroup, addRemoteStreamCallback
     };
 
     pc.onaddstream = function (event) {
+        console.log("ADD REMOTE STREAM");
         addRemoteStreamCallback(event.stream.toURL());
     };
+
+    pc.addStream(stream);
 
     return pc;
 }
@@ -85,29 +88,38 @@ export default class App extends Component {
     onCall = () => {
         if (this.state.recGroup === '') return;
 
-        this.pc = createPC(true, this.connection, this.state.myGroup, this.state.recGroup, this.onAddRemoteStream);
+        this.pc = createPC(true, this.connection, this.state.myGroup, this.state.recGroup, this.stream, this.onAddRemoteStream);
     };
 
     onNewOffer = (callerGroup, sdp) => {
-        this.pc = createPC(false, this.connection, '', callerGroup, this.onAddRemoteStream);
+        this.pc = createPC(false, this.connection, '', callerGroup, this.stream, this.onAddRemoteStream);
 
-        this.pc.setRemoteDescription(new RTCSessionDescription(sdp)).then(() => {
+        this.pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(sdp))).then(() => {
+            console.log("SET REMOTE DESCRIPTION");
 
-            this.pc.createAnswer().then(this.pc.setLocalDescription).then(() => {
-                console.log("DESCRIPTION", this.pc.localDescription);
-
-                this.connection.invoke("SendAnswer", callerGroup, pc.localDescription);
-            });
+            this.pc.createAnswer((desc) => {
+                console.log('createAnswer', desc);
+                this.pc.setLocalDescription(desc, () => {
+                    console.log('setLocalDescription', this.pc.localDescription);
+                    this.connection.invoke('SendAnswer', callerGroup, JSON.stringify(this.pc.localDescription));
+                }, logError);
+            }, logError);
+            // this.pc.createAnswer().then(this.pc.setLocalDescription).then(() => {
+            //     console.log("ANSWER", this.pc.localDescription);
+            //
+            //
+            //     this.connection.invoke("SendAnswer", callerGroup, JSON.stringify(pc.localDescription));
+            // });
 
         });
     };
 
     onNewAnswer = (sdp) => {
-        this.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        this.pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(sdp)));
     };
 
     onNewCandidate = (ice) => {
-        this.pc.addIceCandidate(new RTCIceCandidate(ice));
+        this.pc.addIceCandidate(new RTCIceCandidate(JSON.parse(ice)));
     };
 
     componentDidMount() {
@@ -120,6 +132,7 @@ export default class App extends Component {
         this.connection.start();
 
         getLocalStream(true, (stream) => {
+            this.stream = stream;
             this.setState({ myStreamUrl: stream.toURL() });
         });
     }
