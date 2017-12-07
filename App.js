@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
 import { HubConnection } from '@aspnet/signalr-client';
 
-import { getUserMedia, RTCIceCandidate, RTCPeerConnection, RTCSessionDescription, RTCView } from 'react-native-webrtc';
+import { getUserMedia, RTCIceCandidate, RTCPeerConnection, RTCSessionDescription, RTCView, MediaStreamTrack } from 'react-native-webrtc';
 
 const configuration = { "iceServers": [ { "url": "stun:stun.l.google.com:19302" } ] };
 
@@ -12,6 +12,19 @@ function logError(error) {
 
 function getLocalStream(isFront, callback) {
     let videoSourceId;
+
+    if (Platform.OS === 'ios') {
+        MediaStreamTrack.getSources(sourceInfos => {
+            console.log("sourceInfos: ", sourceInfos);
+
+            for (let i = 0; i < sourceInfos.length; i++) {
+                const sourceInfo = sourceInfos[i];
+                if(sourceInfo.kind === "video" && sourceInfo.facing === (isFront ? "front" : "back")) {
+                    videoSourceId = sourceInfo.id;
+                }
+            }
+        });
+    }
 
     getUserMedia({
         audio: true,
