@@ -1,10 +1,20 @@
 import React, { Component } from 'react';
-import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Button, StyleSheet, Text, TextInput, View, Platform } from 'react-native';
 import { HubConnection } from '@aspnet/signalr-client';
 
-import { getUserMedia, RTCIceCandidate, RTCPeerConnection, RTCSessionDescription, RTCView, MediaStreamTrack } from 'react-native-webrtc';
+import {
+    getUserMedia,
+    MediaStreamTrack,
+    RTCIceCandidate,
+    RTCPeerConnection,
+    RTCSessionDescription,
+    RTCView
+} from 'react-native-webrtc';
 
-const configuration = { "iceServers": [ { "url": "stun:stun.l.google.com:19302" } ] };
+const configuration = {
+    "iceServers": [ { url: "stun:astrofarm-web05.afcore.no:3478" },
+        { url: "turn:astrofarm-web05.afcore.no:3478", 'credential': 'pa55w0rd!', 'username': 'test' } ]
+};
 
 function logError(error) {
     console.log("logError", error);
@@ -18,8 +28,8 @@ function getLocalStream(isFront, callback) {
             console.log("sourceInfos: ", sourceInfos);
 
             for (let i = 0; i < sourceInfos.length; i++) {
-                const sourceInfo = sourceInfos[i];
-                if(sourceInfo.kind === "video" && sourceInfo.facing === (isFront ? "front" : "back")) {
+                const sourceInfo = sourceInfos[ i ];
+                if (sourceInfo.kind === "video" && sourceInfo.facing === (isFront ? "front" : "back")) {
                     videoSourceId = sourceInfo.id;
                 }
             }
@@ -136,7 +146,7 @@ export default class App extends Component {
     };
 
     componentDidMount() {
-        this.connection = new HubConnection("http://192.168.1.207:5001/signaling");
+        this.connection = new HubConnection("http://192.168.1.132:5001/signaling");
 
         this.connection.on('NewOffer', this.onNewOffer);
         this.connection.on('NewAnswer', this.onNewAnswer);
